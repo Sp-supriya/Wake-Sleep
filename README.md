@@ -222,15 +222,6 @@ export const useSpeechToText = (config) => {
 - Suitable for demo/testing purposes
 - For production, migrate to server-side STT processing
 
-## 📊 Browser Compatibility
-
-| Feature | Chrome | Edge | Firefox | Safari | Mobile |
-|---------|--------|------|---------|--------|--------|
-| Web Speech API | ✅ | ✅ | ⚠️ | ⚠️ | ❌ |
-| Wake Word Detection | ✅ | ✅ | ⚠️ | ⚠️ | ❌ |
-| Real-time Transcription | ✅ | ✅ | ⚠️ | ⚠️ | ❌ |
-
-✅ Full Support | ⚠️ Partial Support | ❌ Not Supported
 
 ## 🛠️ Tech Stack
 
