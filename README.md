@@ -200,12 +200,6 @@ export const useSpeechToText = (config) => {
 7. Say wake word to begin transcription
 8. Say sleep word to stop transcription
 
-### Browser Requirements
-
-- Chrome/Edge: Full support
-- Firefox: Limited support
-- Safari: Requires webkit prefix (already handled)
-- Mobile browsers: Limited/No support for Web Speech API (use alternative STT)
 
 ## 🔐 Security Considerations
 
