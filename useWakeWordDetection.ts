@@ -31,10 +31,10 @@ export const useWakeWordDetection = (
   const [status, setStatus] = useState<'idle' | 'waiting-for-wake-word' | 'active-transcription' | 'error'>('idle');
   const [allTranscripts, setAllTranscripts] = useState<Array<{ id: string; text: string; timestamp: number }>>([]);
 
-  // Speech recognition for wake word detection (always listening)
+  // Speech recognition for wake word detection (short bursts to reduce cost)
   const wakeWordSpeech = useSpeechToText({
     language,
-    continuous: true,
+    continuous: false, // Changed to false for shorter bursts
     interimResults: false,
   });
 
@@ -44,6 +44,20 @@ export const useWakeWordDetection = (
     continuous: true,
     interimResults: true,
   });
+
+  // Auto-restart wake word detection in short bursts to reduce cost
+  useEffect(() => {
+    if (!isActive && status === 'waiting-for-wake-word') {
+      // If not listening and should be, restart after a short delay
+      if (!wakeWordSpeech.isListening && !transcriptionSpeech.isListening) {
+        const timer = setTimeout(() => {
+          wakeWordSpeech.startListening();
+        }, 100); // Short delay between detection bursts
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [wakeWordSpeech.isListening, isActive, status, wakeWordSpeech, transcriptionSpeech.isListening]);
 
   // Monitor wake word detection
   useEffect(() => {
@@ -57,13 +71,17 @@ export const useWakeWordDetection = (
         // Check if wake word is detected
         if (text.includes(wakeWord.toLowerCase())) {
           console.log('Wake word detected! Starting transcription...');
+          wakeWordSpeech.stopListening(); // Stop wake word detection first
           setIsActive(true);
           setStatus('active-transcription');
-          transcriptionSpeech.startListening();
+          // Small delay to ensure wake word detection fully stops
+          setTimeout(() => {
+            transcriptionSpeech.startListening();
+          }, 200);
         }
       }
     }
-  }, [wakeWordSpeech.transcriptHistory, isActive, wakeWord, transcriptionSpeech]);
+  }, [wakeWordSpeech.transcriptHistory, isActive, wakeWord, transcriptionSpeech, wakeWordSpeech]);
 
   // Monitor sleep word detection
   useEffect(() => {
@@ -74,15 +92,21 @@ export const useWakeWordDetection = (
         const text = lastTranscript.text.toLowerCase().trim();
         console.log('Sleep word detection - heard:', text);
         
-        // Add to transcript history
-        setAllTranscripts((prev) => [
-          ...prev,
-          {
-            id: lastTranscript.id,
-            text: lastTranscript.text,
-            timestamp: lastTranscript.timestamp,
-          },
-        ]);
+        // Only add if this ID doesn't already exist in allTranscripts
+        setAllTranscripts((prev) => {
+          const exists = prev.some(t => t.id === lastTranscript.id);
+          if (exists) {
+            return prev; // Don't add duplicates
+          }
+          return [
+            ...prev,
+            {
+              id: lastTranscript.id,
+              text: lastTranscript.text,
+              timestamp: lastTranscript.timestamp,
+            },
+          ];
+        });
         
         // Check if sleep word is detected
         if (text.includes(sleepWord.toLowerCase())) {
@@ -90,6 +114,8 @@ export const useWakeWordDetection = (
           setIsActive(false);
           setStatus('waiting-for-wake-word');
           transcriptionSpeech.stopListening();
+          // Restart wake word detection in short bursts
+          setTimeout(() => wakeWordSpeech.startListening(), 100);
         }
       }
     }
